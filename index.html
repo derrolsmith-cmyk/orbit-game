@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#071525"><title>ORBIT · The Perfect Chain</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#071525;color:#e8eff3;font-family:system-ui,-apple-system,sans-serif}body{display:flex;justify-content:center}main{width:min(100%,550px);padding:20px 16px 30px;text-align:center}header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}h1{font-size:22px;letter-spacing:.42em;font-weight:300;margin:0}small{color:#9db0bd;letter-spacing:.12em}#board{display:block;width:100%;height:auto;touch-action:none;border-radius:24px;background:radial-gradient(ellipse at 50% 40%,#143249,#071525 75%);box-shadow:inset 0 0 0 1px #ffffff18,0 14px 50px #0005}#status{min-height:40px;color:#b9cbd3;font-size:14px;padding:12px}nav{display:flex;gap:10px}button{flex:1;border:1px solid #6a879655;background:#153044;color:#eaf5f5;padding:13px;border-radius:12px;font-size:14px}button:active{background:#24516a}.sub{margin-top:14px;color:#839aa8;font-size:12px}
+</style></head><body><main><header><div><h1>ORBIT</h1><small>THE PERFECT CHAIN</small></div><small id="level">01 / 05</small></header><canvas id="board" width="420" height="620" aria-label="ORBIT game board"></canvas><div id="status">Drag from the glowing launcher to aim. Release to fire.</div><nav><button id="restart">Restart</button><button id="next">Next composition →</button></nav><div class="sub">PREVIEW BUILD 0.1.1 · Touch and mouse supported</div></main>
+<script>
+(()=>{'use strict';
+const c=document.getElementById('board'),ctx=c.getContext('2d'),status=document.getElementById('status'),lev=document.getElementById('level');if(!ctx){status.textContent='Canvas is unavailable in this browser.';return}
+const W=420,H=620,launch={x:210,y:557};let index=0,balls=[],shot=null,aim=null,frame=0,remaining=0,won=false;
+const layouts=[
+[[210,170],[130,260],[290,260],[210,345],[110,400],[310,400]],
+[[100,165],[210,160],[320,165],[155,275],[265,275],[210,380]],
+[[210,135],[130,215],[290,215],[90,325],[210,330],[330,325],[210,430]],
+[[105,180],[315,180],[210,240],[125,330],[295,330],[210,410],[210,110]],
+[[210,145],[100,225],[320,225],[155,310],[265,310],[90,405],[210,405],[330,405]]
+];
+function reset(){frame=0;shot=null;aim=null;won=false;balls=layouts[index].map((p,i)=>({x:p[0],y:p[1],r:13,active:false,pulse:0,phase:i*.8,orbit:i%3===0?10:0,baseX:p[0],baseY:p[1]}));remaining=2;status.textContent='Drag from the launcher to aim. '+remaining+' shots available.';lev.textContent=String(index+1).padStart(2,'0')+' / 05'}
+function glow(x,y,r,col){let g=ctx.createRadialGradient(x-r*.3,y-r*.4,1,x,y,r*2);g.addColorStop(0,'#fff');g.addColorStop(.16,col);g.addColorStop(.48,col+'99');g.addColorStop(1,'#00000000');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r*2,0,Math.PI*2);ctx.fill()}
+function draw(){frame++;ctx.clearRect(0,0,W,H);ctx.fillStyle='#071525';ctx.fillRect(0,0,W,H);let bg=ctx.createRadialGradient(210,240,10,210,290,440);bg.addColorStop(0,'#183a4a');bg.addColorStop(1,'#071525');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+ctx.strokeStyle='#8dc7d51c';ctx.lineWidth=1;for(let r=85;r<=250;r+=55){ctx.beginPath();ctx.arc(210,280,r,0,Math.PI*2);ctx.stroke()}
+for(let b of balls){if(b.orbit&&!b.active){b.x=b.baseX+Math.cos(frame*.012+b.phase)*b.orbit;b.y=b.baseY+Math.sin(frame*.012+b.phase)*b.orbit}if(b.pulse>0){ctx.strokeStyle='rgba(116,222,227,'+(b.pulse/55)+')';ctx.lineWidth=2;ctx.beginPath();ctx.arc(b.x,b.y,13+(55-b.pulse)*2.5,0,Math.PI*2);ctx.stroke();b.pulse-=1.5}glow(b.x,b.y,b.active?16:13,b.active?'#f7c78d':'#70d9e1')}
+if(shot){shot.x+=shot.vx;shot.y+=shot.vy;glow(shot.x,shot.y,9,'#f6e6c0');for(let b of balls){if(!b.active&&Math.hypot(b.x-shot.x,b.y-shot.y)<b.r+8){activate(b);shot=null;break}}if(shot&&(shot.x<0||shot.x>W||shot.y<0||shot.y>H))shot=null}
+for(let b of balls){if(b.active&&b.pulse>0){for(let t of balls){if(!t.active&&Math.hypot(t.x-b.x,t.y-b.y)<(55-b.pulse)*2.5+15)activate(t)}}}
+glow(launch.x,launch.y,15,'#f8dfae');ctx.fillStyle='#d2e9ec';ctx.font='12px system-ui';ctx.textAlign='center';ctx.fillText('LAUNCH',launch.x,593);
+if(aim){let dx=launch.x-aim.x,dy=launch.y-aim.y,ang=Math.atan2(dy,dx);ctx.fillStyle='#bcecf1';for(let i=1;i<=14;i++){let x=launch.x+Math.cos(ang)*i*20,y=launch.y+Math.sin(ang)*i*20;if(x<5||x>W-5||y<5||y>H-5)break;ctx.globalAlpha=1-i/17;ctx.beginPath();ctx.arc(x,y,2.5,0,7);ctx.fill()}ctx.globalAlpha=1}
+requestAnimationFrame(draw)}
+function activate(b){if(b.active)return;b.active=true;b.pulse=55;if(balls.every(x=>x.active)){won=true;status.textContent='Beautiful chain! Composition complete. ✨'}}
+function point(e){let r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
+c.addEventListener('pointerdown',e=>{if(shot||won||remaining<=0)return;aim=point(e);c.setPointerCapture(e.pointerId)});c.addEventListener('pointermove',e=>{if(aim)aim=point(e)});c.addEventListener('pointerup',e=>{if(!aim)return;let p=point(e),dx=launch.x-p.x,dy=launch.y-p.y;aim=null;let d=Math.hypot(dx,dy);if(d<15)return;shot={x:launch.x,y:launch.y,vx:dx/d*9,vy:dy/d*9};remaining--;status.textContent=remaining+' shot(s) remaining.';if(!remaining)setTimeout(()=>{if(!won)status.textContent='Try again or explore the next composition.'},1800)});c.addEventListener('pointercancel',()=>aim=null);
+document.getElementById('restart').onclick=reset;document.getElementById('next').onclick=()=>{index=(index+1)%layouts.length;reset()};reset();requestAnimationFrame(draw);
+})();
+</script></body></html>
